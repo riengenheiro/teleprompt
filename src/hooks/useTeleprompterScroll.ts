@@ -6,6 +6,8 @@ type Options = {
   containerRef: RefObject<HTMLElement | null>
 }
 
+const DEFAULT_REWIND_PX = 200
+
 export function useTeleprompterScroll({
   speedPxPerSec,
   enabled,
@@ -24,6 +26,18 @@ export function useTeleprompterScroll({
       containerRef.current.scrollTop = 0
     }
   }, [containerRef])
+
+  const rewind = useCallback(
+    (pixels = DEFAULT_REWIND_PX) => {
+      const el = containerRef.current
+      const next = Math.max(0, offsetRef.current - pixels)
+      offsetRef.current = next
+      setFinished(false)
+      lastTsRef.current = null
+      if (el) el.scrollTop = next
+    },
+    [containerRef],
+  )
 
   useEffect(() => {
     if (!enabled) {
@@ -76,5 +90,5 @@ export function useTeleprompterScroll({
     }
   }, [enabled, speedPxPerSec, containerRef])
 
-  return { finished, reset }
+  return { finished, reset, rewind }
 }

@@ -1,4 +1,4 @@
-# Teleprompt
+# Teleprompter
 
 Teleprompter online com gravação simultânea da câmera frontal e microfone. O texto rola na tela; o vídeo fica só com a imagem e o áudio, e o arquivo baixa no dispositivo.
 

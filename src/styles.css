@@ -93,6 +93,8 @@ textarea {
   overscroll-behavior: contain;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  cursor: pointer;
+  outline: none;
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -147,6 +149,28 @@ textarea {
     transparent
   );
   opacity: 0.55;
+}
+
+.pause-hint {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, calc(-100% - 0.75rem));
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(12, 14, 17, 0.82);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.teleprompter.is-paused .teleprompter-text {
+  opacity: 0.72;
 }
 
 .camera-pip {

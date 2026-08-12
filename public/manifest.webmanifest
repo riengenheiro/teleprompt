@@ -1,6 +1,6 @@
 {
-  "name": "Teleprompt",
-  "short_name": "Teleprompt",
+  "name": "Teleprompter",
+  "short_name": "Teleprompter",
   "description": "Teleprompter online com gravação de câmera e microfone",
   "start_url": "/",
   "display": "standalone",

@@ -11,6 +11,7 @@ type Props = {
   onToggleMirror: () => void
   onEditScript: () => void
   onToggleScroll: () => void
+  onRewind: () => void
   onEnableCamera: () => void
   onRecordToggle: () => void
 }
@@ -28,13 +29,14 @@ export function RecordControls({
   onToggleMirror,
   onEditScript,
   onToggleScroll,
+  onRewind,
   onEnableCamera,
   onRecordToggle,
 }: Props) {
   const busy = countdown != null
 
   return (
-    <footer className="controls">
+    <footer className="controls" onClick={(e) => e.stopPropagation()}>
       <div className="controls-row sliders">
         <label className="control-field">
           <span>Velocidade</span>
@@ -83,8 +85,17 @@ export function RecordControls({
         <button
           type="button"
           className="btn btn-ghost"
+          onClick={onRewind}
+          disabled={busy}
+          title="Voltar o texto"
+        >
+          Voltar
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
           onClick={onToggleScroll}
-          disabled={busy || isRecording}
+          disabled={busy}
         >
           {isScrolling ? 'Pausar' : 'Rolar'}
         </button>

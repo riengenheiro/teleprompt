@@ -9,13 +9,15 @@ import { useWakeLock } from './hooks/useWakeLock'
 import { downloadBlob, timestampedFilename } from './lib/download'
 import './styles.css'
 
-const DEFAULT_SCRIPT = `Bem-vindo ao Teleprompt.
+const DEFAULT_SCRIPT = `Bem-vindo ao Teleprompter.
 
 Cole o seu roteiro, ative a câmera e toque em Gravar.
 
 O texto sobe sozinho enquanto o vídeo é gravado no celular ou no computador.
 
-Quando terminar, o arquivo baixa automaticamente.`
+Quando terminar, o arquivo baixa automaticamente.
+
+Toque na tela para pausar ou retomar o texto.`
 
 export default function App() {
   const [script, setScript] = useState(DEFAULT_SCRIPT)
@@ -26,19 +28,21 @@ export default function App() {
   const [scrolling, setScrolling] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [sessionActive, setSessionActive] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const countdownTimer = useRef<number | null>(null)
 
   const recorder = useMediaRecorder()
   const isRecording = recorder.status === 'recording'
-  const keepAwake = isRecording || scrolling || countdown != null
+  const keepAwake =
+    isRecording || scrolling || countdown != null || sessionActive
 
   useWakeLock(keepAwake)
 
-  const { finished, reset } = useTeleprompterScroll({
+  const { finished, reset, rewind } = useTeleprompterScroll({
     speedPxPerSec: speed,
-    enabled: scrolling || isRecording,
+    enabled: scrolling,
     containerRef,
   })
 
@@ -57,10 +61,12 @@ export default function App() {
 
   const beginRecording = useCallback(() => {
     reset()
+    setSessionActive(true)
     setScrolling(true)
     const ok = recorder.startRecording()
     if (!ok) {
       setScrolling(false)
+      setSessionActive(false)
       showToast(recorder.error ?? 'Não foi possível gravar')
     }
   }, [recorder, reset, showToast])
@@ -90,6 +96,7 @@ export default function App() {
   const handleStop = useCallback(async () => {
     clearCountdown()
     setScrolling(false)
+    setSessionActive(false)
     const blob = await recorder.stopRecording()
     if (blob && blob.size > 0) {
       downloadBlob(blob, timestampedFilename(recorder.format.extension))
@@ -102,6 +109,9 @@ export default function App() {
   useEffect(() => {
     if (finished && isRecording) {
       void handleStop()
+    } else if (finished && !isRecording) {
+      setScrolling(false)
+      setSessionActive(false)
     }
   }, [finished, isRecording, handleStop])
 
@@ -117,10 +127,21 @@ export default function App() {
     startCountdownThenRecord()
   }
 
+  const toggleScroll = useCallback(() => {
+    if (countdown != null || editing) return
+    setScrolling((prev) => {
+      const next = !prev
+      if (next) setSessionActive(true)
+      return next
+    })
+  }, [countdown, editing])
+
+  const paused = sessionActive && !scrolling && countdown == null
+
   return (
     <div className="app">
       <header className="brand-bar">
-        <p className="brand">Teleprompt</p>
+        <p className="brand">Teleprompter</p>
         {isRecording && <span className="rec-badge">REC</span>}
       </header>
 
@@ -129,6 +150,8 @@ export default function App() {
         text={script}
         fontSize={fontSize}
         mirrored={mirrored}
+        paused={paused}
+        onTogglePause={toggleScroll}
       />
 
       <CameraPreview stream={recorder.stream} />
@@ -151,7 +174,7 @@ export default function App() {
         speed={speed}
         fontSize={fontSize}
         mirrored={mirrored}
-        isScrolling={scrolling && !isRecording}
+        isScrolling={scrolling}
         isRecording={isRecording}
         cameraReady={recorder.status === 'ready' || isRecording}
         countdown={countdown}
@@ -159,14 +182,8 @@ export default function App() {
         onFontSizeChange={setFontSize}
         onToggleMirror={() => setMirrored((v) => !v)}
         onEditScript={() => setEditing(true)}
-        onToggleScroll={() => {
-          if (scrolling) {
-            setScrolling(false)
-          } else {
-            reset()
-            setScrolling(true)
-          }
-        }}
+        onToggleScroll={toggleScroll}
+        onRewind={() => rewind()}
         onEnableCamera={() => {
           void recorder.enableCamera().then((ok) => {
             if (!ok) showToast('Permissão de câmera/microfone negada')

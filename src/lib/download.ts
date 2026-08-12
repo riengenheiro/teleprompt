@@ -12,5 +12,5 @@ export function timestampedFilename(extension: string) {
     .toISOString()
     .replace(/[:.]/g, '-')
     .slice(0, 19)
-  return `teleprompt-${stamp}.${extension}`
+  return `teleprompter-${stamp}.${extension}`
 }
