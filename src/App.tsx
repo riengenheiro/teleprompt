@@ -3,10 +3,12 @@ import { CameraPreview } from './components/CameraPreview'
 import { RecordControls } from './components/RecordControls'
 import { ScriptEditor } from './components/ScriptEditor'
 import { Teleprompter } from './components/Teleprompter'
+import { useFullscreen } from './hooks/useFullscreen'
 import { useMediaRecorder } from './hooks/useMediaRecorder'
 import { useTeleprompterScroll } from './hooks/useTeleprompterScroll'
 import { useWakeLock } from './hooks/useWakeLock'
 import { downloadBlob, timestampedFilename } from './lib/download'
+import { loadPrefs, savePrefs } from './lib/storage'
 import './styles.css'
 
 const DEFAULT_SCRIPT = `Bem-vindo ao Teleprompter.
@@ -19,24 +21,43 @@ Quando terminar, o arquivo baixa automaticamente.
 
 Toque na tela para pausar ou retomar o texto.`
 
+const saved = loadPrefs()
+
+function initialScript() {
+  return typeof saved?.script === 'string' ? saved.script : DEFAULT_SCRIPT
+}
+
+function initialSpeed() {
+  const n = saved?.speed
+  return typeof n === 'number' && n >= 20 && n <= 160 ? n : 55
+}
+
+function initialFontSize() {
+  const n = saved?.fontSize
+  return typeof n === 'number' && n >= 28 && n <= 72 ? n : 42
+}
+
 export default function App() {
-  const [script, setScript] = useState(DEFAULT_SCRIPT)
+  const [script, setScript] = useState(initialScript)
   const [editing, setEditing] = useState(false)
-  const [speed, setSpeed] = useState(55)
-  const [fontSize, setFontSize] = useState(42)
-  const [mirrored, setMirrored] = useState(false)
+  const [speed, setSpeed] = useState(initialSpeed)
+  const [fontSize, setFontSize] = useState(initialFontSize)
+  const [mirrored, setMirrored] = useState(Boolean(saved?.mirrored))
   const [scrolling, setScrolling] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [sessionActive, setSessionActive] = useState(false)
+  const [immersive, setImmersive] = useState(false)
 
+  const appRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const countdownTimer = useRef<number | null>(null)
 
   const recorder = useMediaRecorder()
+  const fullscreen = useFullscreen()
   const isRecording = recorder.status === 'recording'
   const keepAwake =
-    isRecording || scrolling || countdown != null || sessionActive
+    isRecording || scrolling || countdown != null || sessionActive || immersive
 
   useWakeLock(keepAwake)
 
@@ -45,6 +66,10 @@ export default function App() {
     enabled: scrolling,
     containerRef,
   })
+
+  useEffect(() => {
+    savePrefs({ script, speed, fontSize, mirrored })
+  }, [script, speed, fontSize, mirrored])
 
   const showToast = useCallback((message: string) => {
     setToast(message)
@@ -59,6 +84,11 @@ export default function App() {
     setCountdown(null)
   }, [])
 
+  const leaveImmersive = useCallback(async () => {
+    setImmersive(false)
+    await fullscreen.exit()
+  }, [fullscreen])
+
   const beginRecording = useCallback(() => {
     reset()
     setSessionActive(true)
@@ -67,9 +97,10 @@ export default function App() {
     if (!ok) {
       setScrolling(false)
       setSessionActive(false)
+      void leaveImmersive()
       showToast(recorder.error ?? 'Não foi possível gravar')
     }
-  }, [recorder, reset, showToast])
+  }, [leaveImmersive, recorder, reset, showToast])
 
   const startCountdownThenRecord = useCallback(() => {
     if (!recorder.stream) {
@@ -98,13 +129,14 @@ export default function App() {
     setScrolling(false)
     setSessionActive(false)
     const blob = await recorder.stopRecording()
+    await leaveImmersive()
     if (blob && blob.size > 0) {
       downloadBlob(blob, timestampedFilename(recorder.format.extension))
       showToast('Vídeo baixado')
     } else {
       showToast('Gravação vazia — tente de novo')
     }
-  }, [clearCountdown, recorder, showToast])
+  }, [clearCountdown, leaveImmersive, recorder, showToast])
 
   useEffect(() => {
     if (finished && isRecording) {
@@ -136,14 +168,24 @@ export default function App() {
     })
   }, [countdown, editing])
 
+  const enableCameraImmersive = useCallback(async () => {
+    const ok = await recorder.enableCamera()
+    if (!ok) {
+      showToast('Permissão de câmera/microfone negada')
+      return
+    }
+    setImmersive(true)
+    await fullscreen.enter(appRef.current)
+  }, [fullscreen, recorder, showToast])
+
   const paused = sessionActive && !scrolling && countdown == null
 
   return (
-    <div className="app">
-      <header className="brand-bar">
-        <p className="brand">Teleprompter</p>
-        {isRecording && <span className="rec-badge">REC</span>}
-      </header>
+    <div
+      ref={appRef}
+      className={`app ${immersive ? 'is-immersive' : ''}`}
+    >
+      {isRecording && <span className="rec-badge">REC</span>}
 
       <Teleprompter
         ref={containerRef}
@@ -185,9 +227,7 @@ export default function App() {
         onToggleScroll={toggleScroll}
         onRewind={() => rewind()}
         onEnableCamera={() => {
-          void recorder.enableCamera().then((ok) => {
-            if (!ok) showToast('Permissão de câmera/microfone negada')
-          })
+          void enableCameraImmersive()
         }}
         onRecordToggle={onRecordToggle}
       />
@@ -196,7 +236,11 @@ export default function App() {
         <ScriptEditor
           value={script}
           onChange={setScript}
-          onClose={() => setEditing(false)}
+          onClose={() => {
+            savePrefs({ script, speed, fontSize, mirrored })
+            setEditing(false)
+            showToast('Roteiro salvo neste aparelho')
+          }}
         />
       )}
     </div>

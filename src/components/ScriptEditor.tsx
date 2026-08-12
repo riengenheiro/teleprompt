@@ -51,6 +51,7 @@ export function ScriptEditor({ value, onChange, onClose }: Props) {
         autoFocus
         spellCheck
       />
+      <p className="editor-save-hint">Salvo automaticamente neste aparelho</p>
     </div>
   )
 }

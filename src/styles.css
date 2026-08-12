@@ -47,26 +47,25 @@ textarea {
   position: relative;
   height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   min-height: 100dvh;
+  background: var(--bg);
 }
 
-.brand-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1.1rem 0.4rem;
-  z-index: 5;
+.app.is-immersive {
+  min-height: 100dvh;
+  height: 100dvh;
 }
 
-.brand {
-  margin: 0;
-  font-size: clamp(1.35rem, 4vw, 1.85rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+.app.is-immersive .controls {
+  padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
 }
 
 .rec-badge {
+  position: fixed;
+  top: calc(0.65rem + env(safe-area-inset-top, 0px));
+  right: 0.85rem;
+  z-index: 12;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -75,6 +74,7 @@ textarea {
   padding: 0.28rem 0.55rem;
   border-radius: 4px;
   animation: pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 @keyframes pulse {
@@ -95,6 +95,7 @@ textarea {
   -webkit-overflow-scrolling: touch;
   cursor: pointer;
   outline: none;
+  padding-top: env(safe-area-inset-top, 0px);
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -311,7 +312,7 @@ textarea {
   z-index: 30;
   background: var(--bg);
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
 }
 
@@ -342,11 +343,19 @@ textarea {
   height: 100%;
   border: 0;
   resize: none;
-  padding: 1rem 1.1rem 2rem;
+  padding: 1rem 1.1rem 1rem;
   background: transparent;
   line-height: 1.55;
   font-size: 1.05rem;
   outline: none;
+}
+
+.editor-save-hint {
+  margin: 0;
+  padding: 0.55rem 1.1rem 0.9rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--line);
 }
 
 .error-banner,
@@ -364,7 +373,7 @@ textarea {
 }
 
 .error-banner {
-  top: 3.5rem;
+  top: calc(0.65rem + env(safe-area-inset-top, 0px));
   background: #3a1818;
   border: 1px solid var(--record);
   color: #ffd4d4;
